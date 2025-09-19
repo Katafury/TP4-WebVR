@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>TP4 – WebVR avec A-Frame : rig + ombres</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/fernandojsg/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script>
+      // Composant pour tirer quand la gâchette est pressée (attaché au contrôleur droit)
+      AFRAME.registerComponent('gun-shoot', {
+        init: function () {
+          const controller = this.el;
+          const scene = this.el.sceneEl;
+
+          controller.addEventListener('triggerdown', () => {
+            // repère l'entité arme dans la scène (id="gun")
+            const gun = document.querySelector('#gun');
+            if (!gun) return;
+
+            // Vérifie que l'arme est bien tenue par CE contrôleur (elle est attachée en tant qu'enfant)
+            if (gun.object3D.parent !== controller.object3D) return;
+
+            // position et orientation mondiales de l'arme
+            const worldPos = new THREE.Vector3();
+            gun.object3D.getWorldPosition(worldPos);
+            const worldQuat = new THREE.Quaternion();
+            gun.object3D.getWorldQuaternion(worldQuat);
+
+            // direction avant locale (-Z) transformée en espace monde
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(worldQuat).normalize();
+
+            // point d'apparition légèrement devant le canon
+            const spawnPos = worldPos.clone().add(forward.clone().multiplyScalar(0.18));
+
+            // crée la balle (projectile)
+            const bullet = document.createElement('a-sphere');
+            bullet.setAttribute('radius', '0.03');
+            bullet.setAttribute('color', '#ffcc00');
+            bullet.setAttribute('position', `${spawnPos.x} ${spawnPos.y} ${spawnPos.z}`);
+            // physique : masse faible, forme sphere
+            bullet.setAttribute('dynamic-body', 'mass:0.05; shape:sphere; linearDamping:0.01');
+
+            // ajoute à la scène
+            scene.appendChild(bullet);
+
+            // applique l'impulsion lorsque le body est prêt
+            bullet.addEventListener('body-loaded', function () {
+              // force initiale — ajuste ce coefficient pour changer la vitesse
+              const FORCE = 10; // ~10 est un bon départ ; augmenter pour plus de vitesse
+              const impulse = new CANNON.Vec3(forward.x * FORCE, forward.y * FORCE, forward.z * FORCE);
+              // applique l'impulsion au centre de masse
+              bullet.body.applyImpulse(impulse, bullet.body.position);
+            });
+
+            // nettoie après 5s pour éviter accumulation
+            setTimeout(() => {
+              if (bullet.parentNode) bullet.parentNode.removeChild(bullet);
+            }, 5000);
+          });
+        }
+      });
+    </script>
+  </head>
+
+  <body>    
+    <a-scene
+      shadow="type: pcfsoft"
+      physics="gravity: -9.8"   
+      renderer="antialias: true; colorManagement: true;"
+    >
+      <!-- Lumière directionnelle + ombres -->
+      <a-entity
+        light="type: directional; castShadow: true; intensity: 1"
+        position="2 4 -3"
+        shadow="mapSize: 2048 2048; cameraFar: 30"
+      ></a-entity>
+
+      <!-- Lumière ambiante -->
+      <a-entity light="type: ambient; intensity: 0.3"></a-entity>
+
+      <!-- Objets -->
+      <a-box
+        position="0 0.5 -2"
+        depth="1"
+        height="1"
+        width="1"
+        color="#4CC3D9"
+        shadow="cast: true; receive: true"
+        dynamic-body
+        grabbable
+      ></a-box>
+
+      <a-sphere
+        position="1 1.25 -4"
+        radius="1.25"
+        color="#EF2D5E"
+        shadow="cast: true; receive: true"
+        dynamic-body
+        grabbable
+      ></a-sphere>
+
+      <a-cylinder position="-1 1 -4"
+            radius="0.5"
+            height="2"
+            color="#FF5733"
+            shadow="cast: true; receive: true"
+            dynamic-body
+            grabbable>
+</a-cylinder>
+
+
+      <a-plane
+        rotation="-90 0 0"
+        width="20"
+        height="20"
+        color="#7BC8A4"
+        shadow="receive: true"
+        static-body
+      ></a-plane>
+
+      <a-entity id="gun"
+                position="0.5 1.4 -0.6"
+                rotation="0 20 0"
+                dynamic-body="mass:1"
+                grabbable>
+        <!-- simple représentation du pistolet -->
+        <a-box width="0.05" height="0.06" depth="0.25" color="#111111" position="0 0 -0.1" shadow="cast:true"></a-box>
+        <!-- petit guidon / détente visuelle -->
+        <a-box width="0.02" height="0.02" depth="0.03" color="#333333" position="0 -0.02 0.03"></a-box>
+        <!-- si tu veux utiliser un .glb, commente les <a-box> et décommente la ligne suivante :
+        <a-gltf-model src="url(ton_modele.glb)" scale="0.8 0.8 0.8" position="0 0 0"></a-gltf-model>
+        -->
+      </a-entity>
+
+      <!-- ===== Rig du joueur ===== -->
+      <!-- movement-controls = gère le déplacement avec le joystick gauche -->
+      <a-entity
+        id="rig"
+        movement-controls="fly: false; speed: 3"
+        position="0 1.6 0"
+      >
+        <!-- Caméra (look-controls = rotation avec joystick droit) -->
+        <a-entity camera look-controls position="0 0 0">
+          <a-cursor></a-cursor>
+        </a-entity>
+
+        <!-- Contrôleurs (avec ray + grab) -->
+        <a-entity oculus-touch-controls="hand: left"
+                  laser-controls="hand: left"
+                  raycaster="objects: [grabbable]"
+                  grab></a-entity>
+
+        <a-entity oculus-touch-controls="hand: right"
+                  laser-controls="hand: right"
+                  raycaster="objects: [grabbable]"
+                  grab
+                  gun-shoot></a-entity>
+        </a-entity>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>
