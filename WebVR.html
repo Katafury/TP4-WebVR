@@ -2,59 +2,38 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – WebVR avec A-Frame (déplacement + grab)</title>
+    <title>TP4 – WebVR A-Frame (déplacement + rotation)</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/fernandojsg/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
   </head>
 
   <body>
     <a-scene shadow="type: pcfsoft"
-             physics="gravity: -9.8"
              renderer="antialias: true; colorManagement: true;">
-
-      <!-- Lumière directionnelle -->
-      <a-entity light="type: directional; castShadow: true; intensity: 1"
-                position="2 4 -3"
-                shadow="mapSize: 2048 2048; cameraFar: 30"></a-entity>
-
-      <!-- Lumière ambiante -->
+      
+      <!-- Lumière -->
+      <a-entity light="type: directional; intensity: 1" position="2 4 -3"></a-entity>
       <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
       <!-- Objets -->
-      <a-box position="0 0.5 -2" depth="1" height="1" width="1" color="#4CC3D9"
-             shadow="cast: true; receive: true"
-             dynamic-body grabbable></a-box>
+      <a-box position="0 0.5 -2" color="#4CC3D9"></a-box>
+      <a-sphere position="1 1.25 -4" radius="1.25" color="#EF2D5E"></a-sphere>
+      <a-cylinder position="-1 1 -4" radius="0.5" height="2" color="#FF5733"></a-cylinder>
+      <a-plane rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
 
-      <a-sphere position="1 1.25 -4" radius="1.25" color="#EF2D5E"
-                shadow="cast: true; receive: true"
-                dynamic-body grabbable></a-sphere>
-
-      <a-cylinder position="-1 1 -4" radius="0.5" height="2" color="#FF5733"
-                  shadow="cast: true; receive: true"
-                  dynamic-body grabbable></a-cylinder>
-
-      <!-- Sol -->
-      <a-plane rotation="-90 0 0" width="20" height="20" color="#7BC8A4"
-               shadow="receive: true" static-body></a-plane>
-
-      <!-- RIG joueur -->
+      <!-- RIG du joueur -->
       <a-entity id="rig"
                 movement-controls="fly: false; speed: 3"
                 position="0 1.6 0">
 
-        <!-- Caméra -->
+        <!-- Caméra (rotation joystick droit via look-controls) -->
         <a-entity camera look-controls position="0 0 0"></a-entity>
 
         <!-- Contrôleur gauche -->
-        <a-entity hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc"
-                  raycaster="objects: .grabbable"
-                  grab></a-entity>
+        <a-entity oculus-touch-controls="hand: left"></a-entity>
 
         <!-- Contrôleur droit -->
-        <a-entity hand-controls="hand: right; handModelStyle: lowPoly; color: #ccccff"
-                  raycaster="objects: .grabbable"
-                  grab></a-entity>
+        <a-entity oculus-touch-controls="hand: right"></a-entity>
 
       </a-entity>
     </a-scene>
