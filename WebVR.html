@@ -2,38 +2,32 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – WebVR A-Frame (déplacement + rotation)</title>
+    <title>A-Frame – Déplacement avec joysticks</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/fernandojsg/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
   </head>
 
   <body>
-    <a-scene shadow="type: pcfsoft"
-             renderer="antialias: true; colorManagement: true;">
-      
-      <!-- Lumière -->
+    <a-scene>
+      <!-- Lumières -->
       <a-entity light="type: directional; intensity: 1" position="2 4 -3"></a-entity>
-      <a-entity light="type: ambient; intensity: 0.3"></a-entity>
+      <a-entity light="type: ambient; intensity: 0.4"></a-entity>
 
-      <!-- Objets -->
-      <a-box position="0 0.5 -2" color="#4CC3D9"></a-box>
-      <a-sphere position="1 1.25 -4" radius="1.25" color="#EF2D5E"></a-sphere>
-      <a-cylinder position="-1 1 -4" radius="0.5" height="2" color="#FF5733"></a-cylinder>
+      <!-- Sol -->
       <a-plane rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
 
+      <!-- Quelques objets repères -->
+      <a-box position="0 0.5 -2" color="#4CC3D9"></a-box>
+      <a-sphere position="2 1.25 -4" radius="1.25" color="#EF2D5E"></a-sphere>
+      <a-cylinder position="-2 1 -4" radius="0.5" height="2" color="#FF5733"></a-cylinder>
+
       <!-- RIG du joueur -->
-      <a-entity id="rig"
-                movement-controls="fly: false; speed: 3"
-                position="0 1.6 0">
-
-        <!-- Caméra (rotation joystick droit via look-controls) -->
-        <a-entity camera look-controls position="0 0 0"></a-entity>
-
-        <!-- Contrôleur gauche -->
-        <a-entity oculus-touch-controls="hand: left"></a-entity>
-
-        <!-- Contrôleur droit -->
-        <a-entity oculus-touch-controls="hand: right"></a-entity>
+      <a-entity id="rig" position="0 1.6 0"
+                universal-controls
+                wasd-controls="acceleration: 20"
+                gamepad-controls>
+        
+        <!-- Caméra -->
+        <a-entity camera look-controls></a-entity>
 
       </a-entity>
     </a-scene>
