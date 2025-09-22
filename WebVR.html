@@ -2,9 +2,12 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – VR Rig avec joystick</title>
+    <title>TP4 – VR Rig avec joystick et grab</title>
+    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <!-- Physics System compatible Three.js r155+ -->
     <script src="https://cdn.jsdelivr.net/npm/@c-frame/aframe-physics-system@4.2.3/dist/aframe-physics-system.min.js"></script>
+    <!-- Extras et super-hands -->
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component@5.0.2/dist/aframe-super-hands.min.js"></script>
   </head>
@@ -22,38 +25,38 @@
       ></a-entity>
       <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
-      <!-- Objets -->
+      <!-- Objets dynamiques (attrapables) -->
       <a-box
+        class="grabbable"
         position="0 0.5 -2"
         depth="1"
         height="1"
         width="1"
         color="#4CC3D9"
         shadow="cast: true; receive: true"
-        dynamic-body
-        grabbable
+        dynamic-body="shape: box; mass: 1"
       ></a-box>
 
       <a-sphere
+        class="grabbable"
         position="1 1.25 -4"
         radius="1.25"
         color="#EF2D5E"
         shadow="cast: true; receive: true"
-        dynamic-body
-        grabbable
+        dynamic-body="shape: sphere; mass: 1"
       ></a-sphere>
 
       <a-cylinder
+        class="grabbable"
         position="-1 1 -4"
         radius="0.5"
         height="2"
         color="#FF5733"
         shadow="cast: true; receive: true"
-        dynamic-body
-        grabbable
+        dynamic-body="shape: cylinder; mass: 1"
       ></a-cylinder>
 
-      <!-- Sol -->
+      <!-- Sol statique -->
       <a-plane
         rotation="-90 0 0"
         width="20"
@@ -63,23 +66,29 @@
         static-body
       ></a-plane>
 
-      <!-- Rig joueur UNIQUE avec joystick -->
+      <!-- Rig joueur -->
       <a-entity id="rig" position="0 1.6 5" joystick-move joystick-turn>
         <!-- Caméra -->
         <a-entity id="playerCam" camera look-controls></a-entity>
+
+        <!-- Contrôleur gauche -->
         <a-entity
           laser-controls="hand: left"
           oculus-touch-controls="hand: left"
-          grabber
+          super-hands
+          raycaster="objects: .grabbable"
         ></a-entity>
+
+        <!-- Contrôleur droit -->
         <a-entity
           laser-controls="hand: right"
           oculus-touch-controls="hand: right"
-          grabber
+          super-hands
+          raycaster="objects: .grabbable"
         ></a-entity>
       </a-entity>
 
-      <!-- Composants joystick -->
+      <!-- Composants joystick et grab -->
       <script>
         // Déplacement avec joystick gauche
         AFRAME.registerComponent("joystick-move", {
@@ -101,6 +110,7 @@
               cam.object3D.getWorldDirection(this.dir);
               this.dir.y = 0;
               this.dir.normalize();
+
               const side = new THREE.Vector3()
                 .crossVectors(new THREE.Vector3(0, 1, 0), this.dir)
                 .normalize();
@@ -134,38 +144,7 @@
             this.delta = dt / 1000;
           },
         });
-
-        // Attraper
-        AFRAME.registerComponent("grabber", {
-          init: function () {
-            this.grabbed = null;
-          },
-          events: {
-            gripdown: function (evt) {
-              if (
-                evt.currentTarget.components["raycaster"].intersections.length >
-                0
-              ) {
-                this.grabbed =
-                  evt.currentTarget.components[
-                    "raycaster"
-                  ].intersections[0].object.el;
-                evt.currentTarget.object3D.attach(this.grabbed.object3D);
-              }
-            },
-            gripup: function (evt) {
-              if (this.grabbed) {
-                this.el.sceneEl.object3D.attach(this.grabbed.object3D);
-                this.grabbed = null;
-              }
-            },
-          },
-        });
       </script>
     </a-scene>
   </body>
 </html>
-
-
-
-
