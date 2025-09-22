@@ -70,10 +70,12 @@
         <a-entity
           laser-controls="hand: left"
           oculus-touch-controls="hand: left"
+          grabber
         ></a-entity>
         <a-entity
           laser-controls="hand: right"
           oculus-touch-controls="hand: right"
+          grabber
         ></a-entity>
       </a-entity>
 
@@ -134,9 +136,32 @@
         });
 
         // Attraper
-       
+        AFRAME.registerComponent("grabber", {
+          init: function () {
+            this.grabbed = null;
+          },
+          events: {
+            gripdown: function (evt) {
+              if (
+                evt.currentTarget.components["raycaster"].intersections.length >
+                0
+              ) {
+                this.grabbed =
+                  evt.currentTarget.components[
+                    "raycaster"
+                  ].intersections[0].object.el;
+                evt.currentTarget.object3D.attach(this.grabbed.object3D);
+              }
+            },
+            gripup: function (evt) {
+              if (this.grabbed) {
+                this.el.sceneEl.object3D.attach(this.grabbed.object3D);
+                this.grabbed = null;
+              }
+            },
+          },
+        });
       </script>
     </a-scene>
   </body>
 </html>
-
