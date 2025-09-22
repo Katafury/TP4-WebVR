@@ -2,56 +2,21 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – VR Rig avec joystick</title>
+    <title>TP4 – VR Rig avec joystick + grabbing</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/fernandojsg/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component@5.0.2/dist/aframe-super-hands.min.js"></script>
   </head>
 
   <body>
-    <a-scene
-      shadow="type: pcfsoft"
-      physics="gravity: -9.8"
-      renderer="antialias: true; colorManagement: true;"
-    >
+    <a-scene shadow="type: pcfsoft" physics="gravity: -9.8">
       <!-- Lumières -->
       <a-entity
         light="type: directional; intensity: 1; castShadow: true"
         position="2 4 -3"
       ></a-entity>
       <a-entity light="type: ambient; intensity: 0.3"></a-entity>
-
-      <!-- Objets -->
-      <a-box
-        position="0 0.5 -2"
-        depth="1"
-        height="1"
-        width="1"
-        color="#4CC3D9"
-        shadow="cast: true; receive: true"
-        dynamic-body
-        grabbable
-      ></a-box>
-
-      <a-sphere
-        position="1 1.25 -4"
-        radius="1.25"
-        color="#EF2D5E"
-        shadow="cast: true; receive: true"
-        dynamic-body
-        grabbable
-      ></a-sphere>
-
-      <a-cylinder
-        position="-1 1 -4"
-        radius="0.5"
-        height="2"
-        color="#FF5733"
-        shadow="cast: true; receive: true"
-        dynamic-body
-        grabbable
-      ></a-cylinder>
 
       <!-- Sol -->
       <a-plane
@@ -63,20 +28,40 @@
         static-body
       ></a-plane>
 
-      <!-- Rig joueur UNIQUE avec joystick -->
+      <!-- Objets interactifs -->
+      <a-box
+        position="0 0.5 -2"
+        depth="1"
+        height="1"
+        width="1"
+        color="#4CC3D9"
+        shadow="cast: true; receive: true"
+        dynamic-body
+        grabbable
+      ></a-box>
+      <a-sphere
+        position="1 1.25 -4"
+        radius="1.25"
+        color="#EF2D5E"
+        shadow="cast: true; receive: true"
+        dynamic-body
+        grabbable
+      ></a-sphere>
+      <a-cylinder
+        position="-1 1 -4"
+        radius="0.5"
+        height="2"
+        color="#FF5733"
+        shadow="cast: true; receive: true"
+        dynamic-body
+        grabbable
+      ></a-cylinder>
+
+      <!-- Rig joueur avec joystick et mains VR -->
       <a-entity id="rig" position="0 1.6 5" joystick-move joystick-turn>
-        <!-- Caméra -->
         <a-entity id="playerCam" camera look-controls></a-entity>
-        <a-entity
-          laser-controls="hand: left"
-          oculus-touch-controls="hand: left"
-          grabber
-        ></a-entity>
-        <a-entity
-          laser-controls="hand: right"
-          oculus-touch-controls="hand: right"
-          grabber
-        ></a-entity>
+        <a-entity laser-controls="hand: left" super-hands></a-entity>
+        <a-entity laser-controls="hand: right" super-hands></a-entity>
       </a-entity>
 
       <!-- Composants joystick -->
@@ -94,17 +79,14 @@
               let y = e.detail.y;
               if (Math.abs(x) < 0.05 && Math.abs(y) < 0.05) return;
               if (this.data.invertY) y = -y;
-
               const rig = document.querySelector("#rig");
               const cam = document.querySelector("#playerCam");
-
               cam.object3D.getWorldDirection(this.dir);
               this.dir.y = 0;
               this.dir.normalize();
               const side = new THREE.Vector3()
                 .crossVectors(new THREE.Vector3(0, 1, 0), this.dir)
                 .normalize();
-
               const move = new THREE.Vector3();
               move.addScaledVector(this.dir, y);
               move.addScaledVector(side, x);
@@ -132,38 +114,6 @@
           },
           tick(t, dt) {
             this.delta = dt / 1000;
-          },
-        });
-
-        // Attraper
-        AFRAME.registerComponent("grabber", {
-          init: function () {
-            this.grabbed = null;
-          },
-          events: {
-            gripdown: function (evt) {
-              const hand = evt.currentTarget;
-              const ray = hand.components["raycaster"];
-              if (ray.intersections.length > 0) {
-                const el = ray.intersections[0].object.el;
-                if (el && el.hasAttribute("dynamic-body")) {
-                  // Désactive temporairement la physique pour pouvoir le bouger
-                  el.removeAttribute("dynamic-body");
-                  // Attache à la main
-                  hand.object3D.attach(el.object3D);
-                  this.grabbed = el;
-                }
-              }
-            },
-            gripup: function (evt) {
-              if (this.grabbed) {
-                // Remet l’objet dans la scène
-                this.el.sceneEl.object3D.attach(this.grabbed.object3D);
-                // Réactive la physique pour que la gravité reprenne effet
-                this.grabbed.setAttribute("dynamic-body", "");
-                this.grabbed = null;
-              }
-            },
           },
         });
       </script>
