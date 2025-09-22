@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – WebVR avec A-Frame : rig + ombres + déplacements</title>
+    <title>TP4 – WebVR avec A-Frame : rig + ombres</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/fernandojsg/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
@@ -24,11 +24,6 @@
       <!-- Lumière ambiante -->
       <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
-      <!-- Rig du joueur avec movement-controls -->
-      <a-entity id="rig" position="0 1.6 5" movement-controls="speed: 0.1; constrainToNavMesh: false; fly: false">
-        <a-entity id="playerCam" camera look-controls></a-entity>
-      </a-entity>
-
       <!-- Objets -->
       <a-box
         position="0 0.5 -2"
@@ -38,6 +33,7 @@
         color="#4CC3D9"
         shadow="cast: true; receive: true"
         dynamic-body
+        grabbable
       ></a-box>
 
       <a-sphere
@@ -46,6 +42,7 @@
         color="#EF2D5E"
         shadow="cast: true; receive: true"
         dynamic-body
+        grabbable
       ></a-sphere>
 
       <a-cylinder
@@ -55,9 +52,10 @@
         color="#FF5733"
         shadow="cast: true; receive: true"
         dynamic-body
-      ></a-cylinder>
+        grabbable
+      >
+      </a-cylinder>
 
-      <!-- Sol -->
       <a-plane
         rotation="-90 0 0"
         width="20"
@@ -67,37 +65,79 @@
         static-body
       ></a-plane>
 
-      <!-- Rig -->
+      <script>
+        // Déplacement avec joystick gauche (avant / arrière / gauche / droite)
+        AFRAME.registerComponent("joystick-move", {
+          schema: {
+            speed: { type: "number", default: 3 },
+            invertY: { type: "boolean", default: false },
+          },
+          init() {
+            this.dir = new THREE.Vector3();
+            this.el.addEventListener("thumbstickmoved", (e) => {
+              let x = e.detail.x;
+              let y = e.detail.y;
+              if (Math.abs(x) < 0.05 && Math.abs(y) < 0.05) return;
+
+              if (this.data.invertY) y = -y; // Active l’inversion si nécessaire
+
+              const rig = document.querySelector("#rig");
+              const cam = document.querySelector("#playerCam");
+
+              cam.object3D.getWorldDirection(this.dir);
+              this.dir.y = 0;
+              this.dir.normalize();
+
+              const side = new THREE.Vector3()
+                .crossVectors(new THREE.Vector3(0, 1, 0), this.dir)
+                .normalize();
+
+              const move = new THREE.Vector3();
+              // Ici on n’inverse plus par défaut (avant = pousser le stick vers l'avant)
+              move.addScaledVector(this.dir, -y); // si avant donne mouvement arrière, mets invertY:true sur l’entité
+              move.addScaledVector(side, x);
+              move.multiplyScalar(this.data.speed * (this.delta || 0.016));
+              rig.object3D.position.add(move);
+            });
+          },
+          tick(t, dt) {
+            this.delta = dt / 1000;
+          },
+        });
+
+        // Rotation avec joystick droit (inchangé)
+        AFRAME.registerComponent("joystick-turn", {
+          schema: { turnSpeed: { type: "number", default: 80 } },
+          init() {
+            this.el.addEventListener("thumbstickmoved", (e) => {
+              const x = e.detail.x;
+              if (Math.abs(x) < 0.08) return;
+              const rig = document.querySelector("#rig");
+              rig.object3D.rotation.y -= THREE.MathUtils.degToRad(
+                x * this.data.turnSpeed * (this.delta || 0.016)
+              );
+            });
+          },
+          tick(t, dt) {
+            this.delta = dt / 1000;
+          },
+        });
+      </script>
+
       <a-entity
-          id="head"
-          camera="active: true"
-          position="0 1.6 0"
-          look-controls="pointerLockEnabled: true; reverseMouseDrag: true"
-        ></a-entity>
-        <!-- Left Controller -->
-        <a-entity
-          id="leftHand"
-          hand-controls="hand: left; handModelStyle: lowPoly; color: #15ACCF"
-          teleport-controls="cameraRig: #cameraRig; teleportOrigin: #head; button: trigger; curveShootingSpeed: 18; landingMaxAngle: 60"
-          visible="true"
-        ></a-entity>
-        <!-- Right Controller -->
-        <a-entity
-          id="rightHand"
-          hand-controls="hand: right; handModelStyle: lowPoly; color: #15ACCF"
-          laser-controls
-          raycaster="showLine: true; far: 10; interval: 0; objects: .clickable, a-link;"
-          line="color: #7cfc00; opacity: 0.5"
-          visible="true"
-        ></a-entity>
+        id="rig"
+        position="0 1.6 5"
+        movement-controls="speed: 0.1; constrainToNavMesh: false; fly: false"
+      >
+        <!-- Caméra enfant -->
+        <a-entity id="playerCam" camera look-controls></a-entity>
+
+        <!-- Contrôleurs VR -->
+        <a-entity laser-controls="hand: left"></a-entity>
+        <a-entity laser-controls="hand: right"></a-entity>
+      </a-entity>
+
       
     </a-scene>
   </body>
 </html>
-
-</html>
-
-
-
-
-
