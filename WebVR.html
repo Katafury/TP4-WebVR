@@ -124,34 +124,25 @@
         AFRAME.registerComponent("grabber", {
           init: function () {
             this.grabbed = null;
-            this.constraint = null;
           },
           events: {
             gripdown: function (evt) {
-              const ray = evt.currentTarget.components["raycaster"];
-              if (ray && ray.intersections.length > 0) {
-                this.grabbed = ray.intersections[0].object.el;
-                if (this.grabbed.hasAttribute("dynamic-body")) {
-                  this.constraint = new CANNON.PointToPointConstraint(
-                    evt.currentTarget.body,
-                    new CANNON.Vec3(0, 0, 0),
-                    this.grabbed.body,
-                    new CANNON.Vec3(0, 0, 0)
-                  );
-                  this.el.sceneEl.systems.physics.world.addConstraint(
-                    this.constraint
-                  );
-                }
+              if (
+                evt.currentTarget.components["raycaster"].intersections.length >
+                0
+              ) {
+                this.grabbed =
+                  evt.currentTarget.components[
+                    "raycaster"
+                  ].intersections[0].object.el;
+                evt.currentTarget.object3D.attach(this.grabbed.object3D);
               }
             },
             gripup: function (evt) {
-              if (this.grabbed && this.constraint) {
-                this.el.sceneEl.systems.physics.world.removeConstraint(
-                  this.constraint
-                );
-                this.constraint = null;
+              if (this.grabbed) {
+                this.el.sceneEl.object3D.attach(this.grabbed.object3D);
+                this.grabbed = null;
               }
-              this.grabbed = null;
             },
           },
         });
