@@ -5,7 +5,8 @@
     <title>TP4 – VR Rig avec joystick</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/fernandojsg/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component@5.0.2/dist/aframe-super-hands.min.js"></script>
   </head>
 
   <body>
@@ -30,6 +31,7 @@
         color="#4CC3D9"
         shadow="cast: true; receive: true"
         dynamic-body
+        grabbable
       ></a-box>
 
       <a-sphere
@@ -38,6 +40,7 @@
         color="#EF2D5E"
         shadow="cast: true; receive: true"
         dynamic-body
+        grabbable
       ></a-sphere>
 
       <a-cylinder
@@ -47,6 +50,7 @@
         color="#FF5733"
         shadow="cast: true; receive: true"
         dynamic-body
+        grabbable
       ></a-cylinder>
 
       <!-- Sol -->
@@ -63,8 +67,8 @@
       <a-entity id="rig" position="0 1.6 5" joystick-move joystick-turn>
         <!-- Caméra -->
         <a-entity id="playerCam" camera look-controls></a-entity>
-        <a-entity laser-controls="hand: left"></a-entity>
-        <a-entity laser-controls="hand: right"></a-entity>
+        <a-entity laser-controls="hand: left" super-hands></a-entity>
+        <a-entity laser-controls="hand: right" super-hands></a-entity>
       </a-entity>
 
       <!-- Composants joystick -->
