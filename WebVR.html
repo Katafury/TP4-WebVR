@@ -21,19 +21,29 @@
       <a-cylinder position="-2 1 -4" radius="0.5" height="2" color="#FF5733"></a-cylinder>
 
       <!-- RIG du joueur -->
-      <a-entity id="rig" movement-controls position="0 1.6 0">
-        <!-- Caméra -->
-        <a-entity camera look-controls></a-entity>
+      <a-entity id="player" movement-controls>
+        <a-entity id="camera" camera position="0 1.7 0">
+          <a-entity class="gun" gltf-model="#gun" position="0.5 -1 -1.2"></a-entity>
+        </a-entity>
 
-        <!-- Contrôleur gauche (déplacement) -->
-        <a-entity hand-controls="hand: left" oculus-touch-controls="hand: left"></a-entity>
-
-        <!-- Contrôleur droit (rotation) -->
-        <a-entity hand-controls="hand: right" oculus-touch-controls="hand: right"></a-entity>
-      </a-entity>
-
+        <a-entity id="hands">
+          <a-entity
+            id="left-hand"
+            position="-0.3 0 -0.3"
+            rotation="0 0 90"
+            hand-controls="hand: left">
+          </a-entity>
+          <a-entity
+            id="right-hand"
+            position="0.5 1.0 -1.5"
+            rotation="0 0 -90"
+            hand-controls="hand: right">
+            <a-entity class="gun" gltf-model="#gun" position=" 0 -0.3 0"></a-entity>
+          </a-entity>
+        </a-entity>
       </a-entity>
     </a-scene>
   </body>
 </html>
+
 
