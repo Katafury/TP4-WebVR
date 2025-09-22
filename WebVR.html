@@ -142,20 +142,25 @@
           },
           events: {
             gripdown: function (evt) {
-              if (
-                evt.currentTarget.components["raycaster"].intersections.length >
-                0
-              ) {
-                this.grabbed =
-                  evt.currentTarget.components[
-                    "raycaster"
-                  ].intersections[0].object.el;
-                evt.currentTarget.object3D.attach(this.grabbed.object3D);
+              const hand = evt.currentTarget;
+              const ray = hand.components["raycaster"];
+              if (ray.intersections.length > 0) {
+                const el = ray.intersections[0].object.el;
+                if (el && el.hasAttribute("dynamic-body")) {
+                  // Désactive temporairement la physique pour pouvoir le bouger
+                  el.removeAttribute("dynamic-body");
+                  // Attache à la main
+                  hand.object3D.attach(el.object3D);
+                  this.grabbed = el;
+                }
               }
             },
             gripup: function (evt) {
               if (this.grabbed) {
+                // Remet l’objet dans la scène
                 this.el.sceneEl.object3D.attach(this.grabbed.object3D);
+                // Réactive la physique pour que la gravité reprenne effet
+                this.grabbed.setAttribute("dynamic-body", "");
                 this.grabbed = null;
               }
             },
