@@ -67,13 +67,11 @@
       <a-entity id="rig" position="0 1.6 5" joystick-move joystick-turn>
         <!-- Caméra -->
         <a-entity id="playerCam" camera look-controls></a-entity>
-
         <a-entity
           laser-controls="hand: left"
           oculus-touch-controls="hand: left"
           grabber
         ></a-entity>
-
         <a-entity
           laser-controls="hand: right"
           oculus-touch-controls="hand: right"
@@ -141,33 +139,21 @@
         AFRAME.registerComponent("grabber", {
           init: function () {
             this.grabbed = null;
-            this.constraint = null;
-            this.tick = AFRAME.utils.throttleTick(this.tick, 0); // tick toutes les frames
           },
           events: {
             gripdown: function (evt) {
-              const hand = evt.currentTarget;
-              const intersections = hand.components.raycaster?.intersections;
-              if (intersections && intersections.length > 0) {
-                this.grabbed = intersections[0].object.el;
-                if (this.grabbed.body) {
-                  this.grabbed.body.type = CANNON.Body.KINEMATIC; // désactive la physique
-                }
+              const ray = evt.currentTarget.components["raycaster"];
+              if (ray && ray.intersections.length > 0) {
+                this.grabbed = ray.intersections[0].object.el;
+                evt.currentTarget.object3D.attach(this.grabbed.object3D);
               }
             },
             gripup: function (evt) {
-              if (this.grabbed && this.grabbed.body) {
-                this.grabbed.body.type = CANNON.Body.DYNAMIC; // réactive la physique
+              if (this.grabbed) {
+                this.el.sceneEl.object3D.attach(this.grabbed.object3D);
+                this.grabbed = null;
               }
-              this.grabbed = null;
             },
-          },
-          tick: function () {
-            if (!this.grabbed) return;
-            const hand = this.el.object3D;
-            const obj = this.grabbed.object3D;
-            obj.position.copy(hand.position);
-            obj.quaternion.copy(hand.quaternion);
           },
         });
       </script>
