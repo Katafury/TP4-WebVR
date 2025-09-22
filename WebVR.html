@@ -2,12 +2,11 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – VR Rig avec joystick</title>
-    <!-- Bibliothèques locales -->
-    <script src="libs/aframe.min.js"></script>
-    <script src="libs/aframe-physics-system.min.js"></script>
-    <script src="libs/aframe-extras.min.js"></script>
-    <script src="libs/aframe-super-hands.min.js"></script>
+    <title>TP4 – VR A</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-physics-system@4.0.1/dist/aframe-physics-system.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component@5.0.2/dist/aframe-super-hands.min.js"></script>
   </head>
 
   <body>
@@ -23,7 +22,7 @@
       ></a-entity>
       <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
-      <!-- Objets interactifs -->
+      <!-- Objets -->
       <a-box
         position="0 0.5 -2"
         depth="1"
@@ -64,8 +63,9 @@
         static-body
       ></a-plane>
 
-      <!-- Rig joueur avec joystick et super-hands -->
+      <!-- Rig joueur UNIQUE avec joystick -->
       <a-entity id="rig" position="0 1.6 5" joystick-move joystick-turn>
+        <!-- Caméra -->
         <a-entity id="playerCam" camera look-controls></a-entity>
         <a-entity laser-controls="hand: left" super-hands></a-entity>
         <a-entity laser-controls="hand: right" super-hands></a-entity>
@@ -86,14 +86,17 @@
               let y = e.detail.y;
               if (Math.abs(x) < 0.05 && Math.abs(y) < 0.05) return;
               if (this.data.invertY) y = -y;
+
               const rig = document.querySelector("#rig");
               const cam = document.querySelector("#playerCam");
+
               cam.object3D.getWorldDirection(this.dir);
               this.dir.y = 0;
               this.dir.normalize();
               const side = new THREE.Vector3()
                 .crossVectors(new THREE.Vector3(0, 1, 0), this.dir)
                 .normalize();
+
               const move = new THREE.Vector3();
               move.addScaledVector(this.dir, y);
               move.addScaledVector(side, x);
