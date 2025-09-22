@@ -62,10 +62,11 @@
       ></a-plane>
 
       <!-- Rig joueur avec joystick -->
-      <a-entity id="rig" position="0 1.6 5" joystick-move joystick-turn>
+      <a-entity id="rig" position="0 1.6 5">
         <a-entity id="playerCam" camera look-controls></a-entity>
 
         <a-entity
+          joystick-move
           laser-controls="hand: left"
           oculus-touch-controls="hand: left"
           grabber
@@ -73,6 +74,7 @@
         ></a-entity>
 
         <a-entity
+          joystick-turn
           laser-controls="hand: right"
           oculus-touch-controls="hand: right"
           grabber
