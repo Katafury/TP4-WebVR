@@ -294,6 +294,13 @@
                   radius: 0.25,
                 });
                 break;
+              case "cylinder":
+                el.setAttribute("geometry", {
+                  primitive: "cylinder",
+                  radius: 0.25,
+                  height: 0.5,
+                });
+                break;
             }
 
             el.setAttribute("material", { color: this.data.color });
