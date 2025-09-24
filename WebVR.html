@@ -51,6 +51,16 @@
         dynamic-body="mass:1"
       ></a-cylinder>
 
+      <a-entity
+        id="gun"
+        gltf-model="url(gun.glb)"
+        scale="0.5 0.5 0.5"
+        position="0 1.6 -1"
+        class="grabbable"
+        dynamic-body="mass:1"
+        shooter
+      ></a-entity>
+
       <!-- Sol -->
       <a-plane
         rotation="-90 0 0"
@@ -180,6 +190,48 @@
                 body.velocity.set(vel.x, vel.y, vel.z);
               }
             }
+          },
+        });
+
+        AFRAME.registerComponent("shooter", {
+          schema: {
+            speed: { type: "number", default: 20 },
+          },
+          init: function () {
+            this.el.addEventListener("triggerdown", () => {
+              if (
+                !this.el.components.grabber ||
+                !this.el.components.grabber.grabbed
+              )
+                return;
+
+              // Position du canon (devant le pistolet)
+              const gunPos = new THREE.Vector3();
+              this.el.object3D.getWorldPosition(gunPos);
+              const gunDir = new THREE.Vector3();
+              this.el.object3D.getWorldDirection(gunDir);
+
+              // Créer la balle
+              const sceneEl = this.el.sceneEl;
+              const bullet = document.createElement("a-sphere");
+              bullet.setAttribute("radius", 0.05);
+              bullet.setAttribute("color", "#FFD700");
+              bullet.setAttribute("dynamic-body", "mass:0.1");
+              bullet.setAttribute("position", gunPos);
+              bullet.setAttribute("shadow", "cast: true; receive: true");
+
+              sceneEl.appendChild(bullet);
+
+              // Appliquer une impulsion pour simuler le tir
+              bullet.addEventListener("body-loaded", () => {
+                const body = bullet.body;
+                body.velocity.set(
+                  gunDir.x * this.data.speed,
+                  gunDir.y * this.data.speed,
+                  gunDir.z * this.data.speed
+                );
+              });
+            });
           },
         });
       </script>
