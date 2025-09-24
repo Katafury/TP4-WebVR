@@ -6,6 +6,7 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@c-frame/aframe-physics-system@4.2.3/dist/aframe-physics-system.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component@5.0.2/dist/aframe-super-hands.min.js"></script>
   </head>
   <body>
     <a-scene
@@ -51,13 +52,12 @@
         dynamic-body="mass:1"
       ></a-cylinder>
 
+      <!-- Pistolet (grabbable mais fixé à la main) -->
       <a-entity
         id="gun"
         gltf-model="url(gun.glb)"
-        scale="0.025 0.025 0.025"
-        position="0 1.6 -1"
+        scale="0.02 0.02 0.02"
         class="grabbable"
-        dynamic-body="mass:1"
         shooter
       ></a-entity>
 
@@ -75,18 +75,21 @@
       <a-entity id="rig" position="0 1.6 5">
         <a-entity id="playerCam" camera look-controls></a-entity>
 
+        <!-- Main gauche -->
         <a-entity
           joystick-move
           laser-controls="hand: left"
           oculus-touch-controls="hand: left"
-          grabber
+          super-hands="grab: true; stretch: false; drag: false"
           raycaster="objects: .grabbable"
         ></a-entity>
+
+        <!-- Main droite -->
         <a-entity
           joystick-turn
           laser-controls="hand: right"
           oculus-touch-controls="hand: right"
-          grabber
+          super-hands="grab: true; stretch: false; drag: false"
           raycaster="objects: .grabbable"
         ></a-entity>
       </a-entity>
@@ -143,69 +146,11 @@
           },
         });
 
-        // Grabber physique avec collisions
-        AFRAME.registerComponent("grabber", {
-          init() {
-            this.grabbed = null;
-            this.grabOffset = new THREE.Vector3();
-          },
-          events: {
-            gripdown: function (evt) {
-              const ray = evt.currentTarget.components["raycaster"];
-              if (ray && ray.intersections.length > 0) {
-                this.grabbed = ray.intersections[0].object.el;
-
-                // Calculer l'offset entre la main et l'objet pour le suivre correctement
-                this.grabOffset
-                  .copy(this.grabbed.object3D.position)
-                  .sub(evt.currentTarget.object3D.position);
-
-                // S'assurer que l'objet garde un dynamic-body
-                if (!this.grabbed.components["dynamic-body"]) {
-                  this.grabbed.setAttribute("dynamic-body", "mass:1");
-                }
-              }
-            },
-            gripup: function (evt) {
-              this.grabbed = null;
-            },
-          },
-          tick: function (t, dt) {
-            if (this.grabbed) {
-              // Calculer la direction vers la main
-              const handPos = new THREE.Vector3();
-              this.el.object3D.getWorldPosition(handPos);
-              const targetPos = handPos.clone().add(this.grabOffset);
-
-              // Déplacer l'objet via velocity pour collisions correctes
-              const body = this.grabbed.body;
-              if (body) {
-                const currentPos = new THREE.Vector3().copy(
-                  this.grabbed.object3D.position
-                );
-                const vel = targetPos
-                  .clone()
-                  .sub(currentPos)
-                  .multiplyScalar(10); // 10 = force / vitesse
-                body.velocity.set(vel.x, vel.y, vel.z);
-              }
-            }
-          },
-        });
-
+        // Composant pour tirer
         AFRAME.registerComponent("shooter", {
-          schema: {
-            speed: { type: "number", default: 20 },
-          },
+          schema: { speed: { type: "number", default: 20 } },
           init: function () {
             this.el.addEventListener("triggerdown", () => {
-              if (
-                !this.el.components.grabber ||
-                !this.el.components.grabber.grabbed
-              )
-                return;
-
-              // Position du canon (devant le pistolet)
               const gunPos = new THREE.Vector3();
               this.el.object3D.getWorldPosition(gunPos);
               const gunDir = new THREE.Vector3();
@@ -222,10 +167,9 @@
 
               sceneEl.appendChild(bullet);
 
-              // Appliquer une impulsion pour simuler le tir
+              // Appliquer la vitesse
               bullet.addEventListener("body-loaded", () => {
-                const body = bullet.body;
-                body.velocity.set(
+                bullet.body.velocity.set(
                   gunDir.x * this.data.speed,
                   gunDir.y * this.data.speed,
                   gunDir.z * this.data.speed
