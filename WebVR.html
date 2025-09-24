@@ -163,15 +163,17 @@
                   if (this.grabbed.components["dynamic-body"]) {
                     this.grabbed.removeAttribute("dynamic-body");
                   }
+                  // Attache l'objet au contrôleur (suivi position+rotation du contrôleur)
                   evt.currentTarget.object3D.attach(this.grabbed.object3D);
 
-                  // Décalage devant la main
+                  // Déplacer le gun légèrement devant la main pour confort
                   this.grabbed.object3D.position.set(0, 0, -0.2);
 
-                  // Correction orientation du modèle (à ajuster selon gun.glb)
-                  this.grabbed.object3D.rotation.set(0, Math.PI / 2, 0);
+                  // FORCE orientation : rotation Y = -90° (anti-horaire)
+                  // Si le modèle nécessite un ajustement Z/X, adapte les valeurs ci-dessous.
+                  this.grabbed.object3D.rotation.set(0, -Math.PI / 2, 0);
                 } else {
-                  // Mode normal → suivi physique
+                  // Mode normal → suivi physique (conserver collisions)
                   this.grabType = "normal";
                   this.grabOffset
                     .copy(this.grabbed.object3D.position)
@@ -183,7 +185,17 @@
               }
             },
             gripup: function () {
+              if (!this.grabbed) return;
+
+              if (this.grabType === "gun") {
+                // Relâcher l'arme → la remettre dans la scène avec physique
+                this.el.sceneEl.object3D.attach(this.grabbed.object3D);
+                this.grabbed.setAttribute("dynamic-body", "mass:1");
+              }
+
+              // reset
               this.grabbed = null;
+              this.grabType = "normal";
             },
           },
           tick: function () {
