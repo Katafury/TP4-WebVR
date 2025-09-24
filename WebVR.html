@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – VR Rig avec joystick + Pistolet</title>
+    <title>TP4 – VR Rig avec joystick</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@c-frame/aframe-physics-system@4.2.3/dist/aframe-physics-system.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
@@ -22,12 +22,6 @@
       ></a-entity>
       <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
-      <!-- Assets -->
-      <a-assets>
-        <!-- Ton modèle de pistolet en local -->
-        <a-asset-item id="gunModel" src="gun.glb"></a-asset-item>
-      </a-assets>
-
       <!-- Objets grabbables -->
       <a-box
         class="grabbable"
@@ -39,7 +33,6 @@
         shadow="cast: true; receive: true"
         dynamic-body="mass:1"
       ></a-box>
-
       <a-sphere
         class="grabbable"
         position="1 1.25 -4"
@@ -48,7 +41,6 @@
         shadow="cast: true; receive: true"
         dynamic-body="mass:1"
       ></a-sphere>
-
       <a-cylinder
         class="grabbable"
         position="-1 1 -4"
@@ -58,19 +50,6 @@
         shadow="cast: true; receive: true"
         dynamic-body="mass:1"
       ></a-cylinder>
-
-      <!-- Pistolet -->
-      <a-entity
-        id="gun"
-        class="grabbable"
-        gltf-model="#gunModel"
-        scale="0.6 0.6 0.6"
-        position="0 1 -2"
-        rotation="0 0 0"
-        dynamic-body="mass:1"
-        weapon="muzzleOffset: 0 0 -0.3; bulletSpeed: 14; bulletLife:4000"
-      >
-      </a-entity>
 
       <!-- Sol -->
       <a-plane
@@ -87,24 +66,23 @@
         <a-entity id="playerCam" camera look-controls></a-entity>
 
         <a-entity
+          joystick-move
           laser-controls="hand: left"
           oculus-touch-controls="hand: left"
           grabber
           raycaster="objects: .grabbable"
-          joystick-move
         ></a-entity>
 
         <a-entity
+          joystick-turn
           laser-controls="hand: right"
           oculus-touch-controls="hand: right"
           grabber
           raycaster="objects: .grabbable"
-          joystick-turn
         ></a-entity>
       </a-entity>
 
       <script>
-        // Déplacement joystick gauche
         AFRAME.registerComponent("joystick-move", {
           schema: {
             speed: { type: "number", default: 3 },
@@ -113,8 +91,8 @@
           init() {
             this.dir = new THREE.Vector3();
             this.el.addEventListener("thumbstickmoved", (e) => {
-              let x = e.detail.x,
-                y = e.detail.y;
+              let x = e.detail.x;
+              let y = e.detail.y;
               if (Math.abs(x) < 0.05 && Math.abs(y) < 0.05) return;
               if (this.data.invertY) y = -y;
               const rig = document.querySelector("#rig");
@@ -137,7 +115,6 @@
           },
         });
 
-        // Rotation joystick droit
         AFRAME.registerComponent("joystick-turn", {
           schema: { turnSpeed: { type: "number", default: 80 } },
           init() {
@@ -155,9 +132,8 @@
           },
         });
 
-        // Grabber (attraper objets avec grip)
         AFRAME.registerComponent("grabber", {
-          init() {
+          init: function () {
             this.grabbed = null;
           },
           events: {
@@ -165,12 +141,9 @@
               const ray = evt.currentTarget.components["raycaster"];
               if (ray && ray.intersections.length > 0) {
                 this.grabbed = ray.intersections[0].object.el;
+                // Désactiver la physique pendant le grab
                 if (this.grabbed.components["dynamic-body"]) {
-                  // Remplacer dynamic-body par kinematic-body
-                  const mass =
-                    this.grabbed.getAttribute("dynamic-body").mass || 1;
                   this.grabbed.removeAttribute("dynamic-body");
-                  this.grabbed.setAttribute("kinematic-body", `mass: ${mass}`);
                 }
                 evt.currentTarget.object3D.attach(this.grabbed.object3D);
               }
@@ -178,66 +151,14 @@
             gripup: function (evt) {
               if (this.grabbed) {
                 this.el.sceneEl.object3D.attach(this.grabbed.object3D);
-                // Remettre dynamic-body pour retomber normalement
-                let mass = 1;
-                if (this.grabbed.components["kinematic-body"]) {
-                  mass = this.grabbed.getAttribute("kinematic-body").mass || 1;
-                  this.grabbed.removeAttribute("kinematic-body");
-                }
-                this.grabbed.setAttribute("dynamic-body", `mass: ${mass}`);
+                // Réactiver la physique après le relâchement
+                this.grabbed.setAttribute("dynamic-body", "mass:1");
                 this.grabbed = null;
               }
             },
-          },
-        });
-
-        // Composant arme
-        AFRAME.registerComponent("weapon", {
-          schema: {
-            muzzleOffset: { type: "vec3" },
-            bulletSpeed: { type: "number", default: 10 },
-            bulletLife: { type: "number", default: 3000 },
-          },
-          init: function () {
-            this.el.addEventListener("triggerdown", (e) => {
-              this.shoot();
-            });
-          },
-          shoot: function () {
-            const bullet = document.createElement("a-sphere");
-            bullet.setAttribute("radius", "0.05");
-            bullet.setAttribute("color", "yellow");
-            bullet.setAttribute("dynamic-body", "mass:0.1");
-            const muzzle = new THREE.Vector3(
-              this.data.muzzleOffset.x,
-              this.data.muzzleOffset.y,
-              this.data.muzzleOffset.z
-            );
-            this.el.object3D.localToWorld(muzzle);
-            bullet.setAttribute(
-              "position",
-              `${muzzle.x} ${muzzle.y} ${muzzle.z}`
-            );
-            this.el.sceneEl.appendChild(bullet);
-            const dir = new THREE.Vector3(0, 0, -1);
-            this.el.object3D.getWorldDirection(dir);
-            dir.normalize().multiplyScalar(this.data.bulletSpeed);
-            setTimeout(() => {
-              if (bullet.body) {
-                bullet.body.velocity.set(dir.x, dir.y, dir.z);
-              }
-            }, 50);
-            setTimeout(() => {
-              if (bullet.parentNode) {
-                bullet.parentNode.removeChild(bullet);
-              }
-            }, this.data.bulletLife);
           },
         });
       </script>
     </a-scene>
   </body>
 </html>
-
-
-
