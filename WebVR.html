@@ -57,6 +57,7 @@
         position="0 1.6 -1"
         class="grabbable"
         dynamic-body="mass:1"
+        shooter
       ></a-entity>
 
       <!-- Sol -->
@@ -72,6 +73,7 @@
       <!-- Rig joueur -->
       <a-entity id="rig" position="0 1.6 5">
         <a-entity id="playerCam" camera look-controls></a-entity>
+
         <a-entity
           joystick-move
           laser-controls="hand: left"
@@ -91,6 +93,59 @@
       </a-entity>
 
       <script>
+        // Déplacement joystick
+        AFRAME.registerComponent("joystick-move", {
+          schema: {
+            speed: { type: "number", default: 3 },
+            invertY: { type: "boolean", default: false },
+          },
+          init() {
+            this.dir = new THREE.Vector3();
+            this.el.addEventListener("thumbstickmoved", (e) => {
+              let x = e.detail.x,
+                y = e.detail.y;
+              if (Math.abs(x) < 0.05 && Math.abs(y) < 0.05) return;
+              if (this.data.invertY) y = -y;
+              const rig = document.querySelector("#rig");
+              const cam = document.querySelector("#playerCam");
+              cam.object3D.getWorldDirection(this.dir);
+              this.dir.y = 0;
+              this.dir.normalize();
+              const side = new THREE.Vector3()
+                .crossVectors(new THREE.Vector3(0, 1, 0), this.dir)
+                .normalize();
+              const move = new THREE.Vector3();
+              move
+                .addScaledVector(this.dir, y)
+                .addScaledVector(side, x)
+                .multiplyScalar(this.data.speed * (this.delta || 0.016));
+              rig.object3D.position.add(move);
+            });
+          },
+          tick(t, dt) {
+            this.delta = dt / 1000;
+          },
+        });
+
+        // Rotation joystick
+        AFRAME.registerComponent("joystick-turn", {
+          schema: { turnSpeed: { type: "number", default: 80 } },
+          init() {
+            this.el.addEventListener("thumbstickmoved", (e) => {
+              const x = e.detail.x;
+              if (Math.abs(x) < 0.08) return;
+              const rig = document.querySelector("#rig");
+              rig.object3D.rotation.y -= THREE.MathUtils.degToRad(
+                x * this.data.turnSpeed * (this.delta || 0.016)
+              );
+            });
+          },
+          tick(t, dt) {
+            this.delta = dt / 1000;
+          },
+        });
+
+        // Grabber
         AFRAME.registerComponent("grabber", {
           init() {
             this.grabbed = null;
@@ -100,35 +155,30 @@
           events: {
             gripdown: function (evt) {
               const ray = evt.currentTarget.components["raycaster"];
-              if (!ray || ray.intersections.length === 0) return;
-              this.grabbed = ray.intersections[0].object.el;
-              if (this.grabbed.id === "gun") {
-                this.grabType = "gun";
-                // Supprimer le dynamic-body classique
-                if (this.grabbed.components["dynamic-body"])
-                  this.grabbed.removeAttribute("dynamic-body");
-                // Ajouter kinematic pour collisions
-                this.grabbed.setAttribute(
-                  "dynamic-body",
-                  "mass:1; type: kinematic"
-                );
-                // Attacher au contrôleur via parentage direct (physique conservée)
-                evt.currentTarget.object3D.add(this.grabbed.object3D);
-                this.grabbed.object3D.position.set(0, 0, -0.2);
-                this.grabbed.object3D.rotation.set(-Math.PI / 4, Math.PI, 0);
-              } else {
-                this.grabType = "normal";
-                this.grabOffset
-                  .copy(this.grabbed.object3D.position)
-                  .sub(evt.currentTarget.object3D.position);
-                if (!this.grabbed.components["dynamic-body"])
-                  this.grabbed.setAttribute("dynamic-body", "mass:1");
+              if (ray && ray.intersections.length > 0) {
+                this.grabbed = ray.intersections[0].object.el;
+                if (this.grabbed.id === "gun") {
+                  this.grabType = "gun";
+                  if (this.grabbed.components["dynamic-body"])
+                    this.grabbed.removeAttribute("dynamic-body");
+                  evt.currentTarget.object3D.attach(this.grabbed.object3D);
+                  this.grabbed.object3D.position.set(0, 0, -0.2);
+                  // orientation conservée
+                  this.grabbed.object3D.rotation.set(-Math.PI / 4, Math.PI, 0);
+                } else {
+                  this.grabType = "normal";
+                  this.grabOffset
+                    .copy(this.grabbed.object3D.position)
+                    .sub(evt.currentTarget.object3D.position);
+                  if (!this.grabbed.components["dynamic-body"])
+                    this.grabbed.setAttribute("dynamic-body", "mass:1");
+                }
               }
             },
             gripup: function () {
               if (!this.grabbed) return;
               if (this.grabType === "gun") {
-                this.el.sceneEl.object3D.add(this.grabbed.object3D);
+                this.el.sceneEl.object3D.attach(this.grabbed.object3D);
                 this.grabbed.setAttribute("dynamic-body", "mass:1");
               }
               this.grabbed = null;
@@ -142,7 +192,9 @@
               const targetPos = handPos.clone().add(this.grabOffset);
               const body = this.grabbed.body;
               if (body) {
-                const currentPos = this.grabbed.object3D.position.clone();
+                const currentPos = new THREE.Vector3().copy(
+                  this.grabbed.object3D.position
+                );
                 const vel = targetPos
                   .clone()
                   .sub(currentPos)
@@ -153,10 +205,12 @@
           },
         });
 
+        // Shooter
         AFRAME.registerComponent("shooter", {
           schema: { speed: { type: "number", default: 20 } },
           init: function () {
             this.el.addEventListener("triggerdown", () => {
+              // Tir uniquement si le contrôleur tient un gun
               const grabberComp = this.el.components.grabber;
               if (
                 !grabberComp ||
@@ -166,23 +220,22 @@
                 return;
 
               const gunEl = grabberComp.grabbed;
-
-              // Utiliser la direction du contrôleur pour tirer
-              const dir = new THREE.Vector3(0, 0, -1);
-              dir.applyQuaternion(this.el.object3D.quaternion).normalize();
-
+              const gunDir = new THREE.Vector3();
+              gunEl.object3D.getWorldDirection(gunDir);
               const gunPos = new THREE.Vector3();
               gunEl.object3D.getWorldPosition(gunPos);
 
+              // Création balle
               const bullet = document.createElement("a-sphere");
               bullet.setAttribute("radius", 0.05);
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
-              bullet.setAttribute("shadow", "cast:true; receive:true");
+              bullet.setAttribute("shadow", "cast: true; receive: true");
 
+              // Position de départ légèrement devant le canon
               const launchPos = gunPos
                 .clone()
-                .add(dir.clone().multiplyScalar(0.15));
+                .add(gunDir.clone().multiplyScalar(0.15));
               bullet.setAttribute(
                 "position",
                 `${launchPos.x} ${launchPos.y} ${launchPos.z}`
@@ -190,10 +243,12 @@
               this.el.sceneEl.appendChild(bullet);
 
               bullet.addEventListener("body-loaded", () => {
-                bullet.body.velocity.set(
-                  dir.x * this.data.speed,
-                  dir.y * this.data.speed,
-                  dir.z * this.data.speed
+                const body = bullet.body;
+                // Appliquer la vitesse dans la direction du canon
+                body.velocity.set(
+                  gunDir.x * this.data.speed,
+                  gunDir.y * this.data.speed,
+                  gunDir.z * this.data.speed
                 );
               });
             });
