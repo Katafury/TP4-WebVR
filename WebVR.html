@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – VR Rig avec joystick</title>
+    <title>TP4 – VR Rig avec joystick et tir</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@c-frame/aframe-physics-system@4.2.3/dist/aframe-physics-system.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
@@ -31,7 +31,6 @@
         shadow="cast: true; receive: true"
         dynamic-body="mass:1"
       ></a-box>
-
       <a-sphere
         class="grabbable"
         position="0 1.25 -3"
@@ -40,7 +39,6 @@
         shadow="cast: true; receive: true"
         dynamic-body="mass:1"
       ></a-sphere>
-
       <a-cylinder
         class="grabbable"
         position="2 1 -3"
@@ -115,9 +113,10 @@
                 .crossVectors(new THREE.Vector3(0, 1, 0), this.dir)
                 .normalize();
               const move = new THREE.Vector3();
-              move.addScaledVector(this.dir, y);
-              move.addScaledVector(side, x);
-              move.multiplyScalar(this.data.speed * (this.delta || 0.016));
+              move
+                .addScaledVector(this.dir, y)
+                .addScaledVector(side, x)
+                .multiplyScalar(this.data.speed * (this.delta || 0.016));
               rig.object3D.position.add(move);
             });
           },
@@ -144,7 +143,7 @@
           },
         });
 
-        // Grabber physique avec gestion spéciale pour le pistolet
+        // Grabber
         AFRAME.registerComponent("grabber", {
           init() {
             this.grabbed = null;
@@ -156,44 +155,30 @@
               const ray = evt.currentTarget.components["raycaster"];
               if (ray && ray.intersections.length > 0) {
                 this.grabbed = ray.intersections[0].object.el;
-
                 if (this.grabbed.id === "gun") {
-                  // Mode arme → coller directement au contrôleur
                   this.grabType = "gun";
-                  if (this.grabbed.components["dynamic-body"]) {
+                  if (this.grabbed.components["dynamic-body"])
                     this.grabbed.removeAttribute("dynamic-body");
-                  }
-                  // Attache l'objet au contrôleur (suivi position+rotation du contrôleur)
                   evt.currentTarget.object3D.attach(this.grabbed.object3D);
-
-                  // Déplacer le gun légèrement devant la main pour confort
                   this.grabbed.object3D.position.set(0, 0, -0.2);
-
-                  // FORCE orientation : rotation Y = -90° (anti-horaire)
-                  // Si le modèle nécessite un ajustement Z/X, adapte les valeurs ci-dessous.
+                  // orientation conservée
                   this.grabbed.object3D.rotation.set(-Math.PI / 4, Math.PI, 0);
                 } else {
-                  // Mode normal → suivi physique (conserver collisions)
                   this.grabType = "normal";
                   this.grabOffset
                     .copy(this.grabbed.object3D.position)
                     .sub(evt.currentTarget.object3D.position);
-                  if (!this.grabbed.components["dynamic-body"]) {
+                  if (!this.grabbed.components["dynamic-body"])
                     this.grabbed.setAttribute("dynamic-body", "mass:1");
-                  }
                 }
               }
             },
             gripup: function () {
               if (!this.grabbed) return;
-
               if (this.grabType === "gun") {
-                // Relâcher l'arme → la remettre dans la scène avec physique
                 this.el.sceneEl.object3D.attach(this.grabbed.object3D);
                 this.grabbed.setAttribute("dynamic-body", "mass:1");
               }
-
-              // reset
               this.grabbed = null;
               this.grabType = "normal";
             },
@@ -218,34 +203,32 @@
           },
         });
 
-        // Système de tir (shooter)
+        // Shooter
         AFRAME.registerComponent("shooter", {
           schema: { speed: { type: "number", default: 20 } },
           init: function () {
             this.el.addEventListener("triggerdown", () => {
-              // si le gun est attaché au contrôleur, tirer
-              if (!this.el.parentEl) return;
-
+              if (!this.el.isConnected) return; // vérifier que le gun est dans la scène
               const gunDir = new THREE.Vector3();
               this.el.object3D.getWorldDirection(gunDir);
               const gunPos = new THREE.Vector3();
               this.el.object3D.getWorldPosition(gunPos);
 
-              const sceneEl = this.el.sceneEl;
               const bullet = document.createElement("a-sphere");
               bullet.setAttribute("radius", 0.05);
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
-              // place la balle légèrement en avant pour éviter collision immédiate avec le gun
+              // placer la balle devant le canon
               const launchPos = gunPos
                 .clone()
-                .add(gunDir.clone().multiplyScalar(0.12));
+                .add(gunDir.clone().multiplyScalar(0.15));
               bullet.setAttribute(
                 "position",
                 `${launchPos.x} ${launchPos.y} ${launchPos.z}`
               );
               bullet.setAttribute("shadow", "cast: true; receive: true");
-              sceneEl.appendChild(bullet);
+
+              this.el.sceneEl.appendChild(bullet);
 
               bullet.addEventListener("body-loaded", () => {
                 const body = bullet.body;
