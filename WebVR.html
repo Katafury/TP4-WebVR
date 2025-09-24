@@ -160,7 +160,6 @@
                 if (this.grabbed.id === "gun") {
                   this.grabType = "gun";
                   if (this.grabbed.components["dynamic-body"])
-                    this.grabbed.removeAttribute("dynamic-body");
                   evt.currentTarget.object3D.attach(this.grabbed.object3D);
                   this.grabbed.object3D.position.set(0, 0, -0.2);
                   // orientation conservée
@@ -248,3 +247,4 @@
     </a-scene>
   </body>
 </html>
+
