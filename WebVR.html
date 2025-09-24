@@ -171,7 +171,7 @@
 
                   // FORCE orientation : rotation Y = -90° (anti-horaire)
                   // Si le modèle nécessite un ajustement Z/X, adapte les valeurs ci-dessous.
-                  this.grabbed.object3D.rotation.set(0, 0, 0);
+                  this.grabbed.object3D.rotation.set(0, Math.PI, 0);
                 } else {
                   // Mode normal → suivi physique (conserver collisions)
                   this.grabType = "normal";
@@ -262,4 +262,5 @@
     </a-scene>
   </body>
 </html>
+
 
