@@ -6,7 +6,6 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@c-frame/aframe-physics-system@4.2.3/dist/aframe-physics-system.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-    
   </head>
   <body>
     <a-scene
@@ -21,7 +20,7 @@
       ></a-entity>
       <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
-      <!-- Objets grabbables -->
+      <!-- Objets grabbables physiques -->
       <a-box
         class="grabbable"
         position="-2 0.5 -3"
@@ -52,10 +51,11 @@
         dynamic-body="mass:1"
       ></a-cylinder>
 
+      <!-- Pistolet -->
       <a-entity
         id="gun"
         gltf-model="url(gun.glb)"
-        scale="0.025 0.025 0.025"
+        scale="0.02 0.02 0.02"
         position="0 1.6 -1"
         class="grabbable"
         dynamic-body="mass:1"
@@ -76,6 +76,7 @@
       <a-entity id="rig" position="0 1.6 5">
         <a-entity id="playerCam" camera look-controls></a-entity>
 
+        <!-- Main gauche -->
         <a-entity
           joystick-move
           laser-controls="hand: left"
@@ -83,6 +84,8 @@
           grabber
           raycaster="objects: .grabbable"
         ></a-entity>
+
+        <!-- Main droite -->
         <a-entity
           joystick-turn
           laser-controls="hand: right"
@@ -144,10 +147,11 @@
           },
         });
 
-        // Grabber physique avec collisions
+        // Grabber (différent pour objets normaux et pistolet)
         AFRAME.registerComponent("grabber", {
           init() {
             this.grabbed = null;
+            this.grabType = null; // "physics" ou "gun"
             this.grabOffset = new THREE.Vector3();
           },
           events: {
@@ -156,29 +160,44 @@
               if (ray && ray.intersections.length > 0) {
                 this.grabbed = ray.intersections[0].object.el;
 
-                // Calculer l'offset entre la main et l'objet pour le suivre correctement
-                this.grabOffset
-                  .copy(this.grabbed.object3D.position)
-                  .sub(evt.currentTarget.object3D.position);
-
-                // S'assurer que l'objet garde un dynamic-body
-                if (!this.grabbed.components["dynamic-body"]) {
-                  this.grabbed.setAttribute("dynamic-body", "mass:1");
+                if (this.grabbed.id === "gun") {
+                  // Mode arme → coller directement à la main
+                  this.grabType = "gun";
+                  if (this.grabbed.components["dynamic-body"]) {
+                    this.grabbed.removeAttribute("dynamic-body");
+                  }
+                  evt.currentTarget.object3D.attach(this.grabbed.object3D);
+                  this.grabbed.object3D.position.set(0, 0, -0.2); // recul léger
+                  this.grabbed.object3D.rotation.set(0, 0, 0);
+                } else {
+                  // Mode objets normaux → physique
+                  this.grabType = "physics";
+                  this.grabOffset
+                    .copy(this.grabbed.object3D.position)
+                    .sub(evt.currentTarget.object3D.position);
+                  if (!this.grabbed.components["dynamic-body"]) {
+                    this.grabbed.setAttribute("dynamic-body", "mass:1");
+                  }
                 }
               }
             },
             gripup: function (evt) {
+              if (!this.grabbed) return;
+
+              if (this.grabType === "gun") {
+                // Relâcher l'arme → la remettre dans la scène avec physique
+                this.el.sceneEl.object3D.attach(this.grabbed.object3D);
+                this.grabbed.setAttribute("dynamic-body", "mass:1");
+              }
               this.grabbed = null;
+              this.grabType = null;
             },
           },
           tick: function (t, dt) {
-            if (this.grabbed) {
-              // Calculer la direction vers la main
+            if (this.grabbed && this.grabType === "physics") {
               const handPos = new THREE.Vector3();
               this.el.object3D.getWorldPosition(handPos);
               const targetPos = handPos.clone().add(this.grabOffset);
-
-              // Déplacer l'objet via velocity pour collisions correctes
               const body = this.grabbed.body;
               if (body) {
                 const currentPos = new THREE.Vector3().copy(
@@ -187,46 +206,35 @@
                 const vel = targetPos
                   .clone()
                   .sub(currentPos)
-                  .multiplyScalar(10); // 10 = force / vitesse
+                  .multiplyScalar(10);
                 body.velocity.set(vel.x, vel.y, vel.z);
               }
             }
           },
         });
 
+        // Tir avec le pistolet
         AFRAME.registerComponent("shooter", {
-          schema: {
-            speed: { type: "number", default: 20 },
-          },
+          schema: { speed: { type: "number", default: 20 } },
           init: function () {
             this.el.addEventListener("triggerdown", () => {
-              if (
-                !this.el.components.grabber ||
-                !this.el.components.grabber.grabbed
-              )
-                return;
+              if (!this.el.parentEl) return;
 
-              // Position du canon (devant le pistolet)
               const gunPos = new THREE.Vector3();
               this.el.object3D.getWorldPosition(gunPos);
               const gunDir = new THREE.Vector3();
               this.el.object3D.getWorldDirection(gunDir);
 
-              // Créer la balle
               const sceneEl = this.el.sceneEl;
               const bullet = document.createElement("a-sphere");
               bullet.setAttribute("radius", 0.05);
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
               bullet.setAttribute("position", gunPos);
-              bullet.setAttribute("shadow", "cast: true; receive: true");
-
               sceneEl.appendChild(bullet);
 
-              // Appliquer une impulsion pour simuler le tir
               bullet.addEventListener("body-loaded", () => {
-                const body = bullet.body;
-                body.velocity.set(
+                bullet.body.velocity.set(
                   gunDir.x * this.data.speed,
                   gunDir.y * this.data.speed,
                   gunDir.z * this.data.speed
