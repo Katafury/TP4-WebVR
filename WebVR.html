@@ -55,12 +55,11 @@
         id="gun"
         gltf-model="url(gun.glb)"
         scale="0.025 0.025 0.025"
-        position="0 1.6 0"
+        position="0 1.6 -1"
         class="grabbable"
-        dynamic-body="mass:1"
-        shooter
+        kinematic-body
+        gun
       ></a-entity>
-
       <!-- Sol -->
       <a-plane
         rotation="-90 0 0"
@@ -189,6 +188,68 @@
                   .multiplyScalar(10); // 10 = force / vitesse
                 body.velocity.set(vel.x, vel.y, vel.z);
               }
+            }
+          },
+        });
+
+        AFRAME.registerComponent("gun", {
+          schema: { speed: { type: "number", default: 20 } },
+          init: function () {
+            this.grabbed = false;
+            this.handEl = null;
+
+            // Quand on attrape le pistolet
+            this.el.addEventListener("grab-start", (e) => {
+              this.grabbed = true;
+              this.handEl = e.detail.hand;
+            });
+
+            // Quand on relâche
+            this.el.addEventListener("grab-end", () => {
+              this.grabbed = false;
+              this.handEl = null;
+            });
+
+            // Tir
+            this.el.addEventListener("triggerdown", () => {
+              if (!this.grabbed) return;
+
+              const gunPos = new THREE.Vector3();
+              this.el.object3D.getWorldPosition(gunPos);
+              const gunDir = new THREE.Vector3();
+              this.el.object3D.getWorldDirection(gunDir);
+
+              const sceneEl = this.el.sceneEl;
+              const bullet = document.createElement("a-sphere");
+              bullet.setAttribute("radius", 0.05);
+              bullet.setAttribute("color", "#FFD700");
+              bullet.setAttribute("dynamic-body", "mass:0.1");
+              bullet.setAttribute(
+                "position",
+                gunPos.add(gunDir.clone().multiplyScalar(0.2))
+              );
+              bullet.setAttribute("shadow", "cast: true; receive: true");
+              sceneEl.appendChild(bullet);
+
+              bullet.addEventListener("body-loaded", () => {
+                const body = bullet.body;
+                body.velocity.set(
+                  gunDir.x * this.data.speed,
+                  gunDir.y * this.data.speed,
+                  gunDir.z * this.data.speed
+                );
+              });
+            });
+          },
+          tick: function () {
+            if (this.grabbed && this.handEl) {
+              const handPos = new THREE.Vector3();
+              this.handEl.object3D.getWorldPosition(handPos);
+              this.el.object3D.position.copy(handPos);
+
+              const handRot = new THREE.Euler();
+              handRot.copy(this.handEl.object3D.rotation);
+              this.el.object3D.rotation.copy(handRot);
             }
           },
         });
