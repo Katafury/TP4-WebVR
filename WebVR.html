@@ -57,7 +57,6 @@
         position="0 1.6 -1"
         class="grabbable"
         dynamic-body="mass:1"
-        shooter
       ></a-entity>
 
       <!-- Sol -->
@@ -159,11 +158,24 @@
                 this.grabbed = ray.intersections[0].object.el;
                 if (this.grabbed.id === "gun") {
                   this.grabType = "gun";
+
+                  // Supprimer le body dynamique classique
                   if (this.grabbed.components["dynamic-body"])
                     this.grabbed.removeAttribute("dynamic-body");
+
+                  // Ajouter un body kinematic pour collisions
+                  this.grabbed.setAttribute(
+                    "dynamic-body",
+                    "mass:1; type: kinematic"
+                  );
+
+                  // Attacher au contrôleur
                   evt.currentTarget.object3D.attach(this.grabbed.object3D);
+
+                  // Déplacer légèrement devant la main
                   this.grabbed.object3D.position.set(0, 0, -0.2);
-                  // orientation conservée
+
+                  // Orientation
                   this.grabbed.object3D.rotation.set(-Math.PI / 4, Math.PI, 0);
                 } else {
                   this.grabType = "normal";
@@ -210,24 +222,29 @@
           schema: { speed: { type: "number", default: 20 } },
           init: function () {
             this.el.addEventListener("triggerdown", () => {
-              const grabber = this.el.components.grabber;
-              if (!grabber || !grabber.grabbed) return;
-              if (grabber.grabbed.id !== "gun") return;
+              // Tir uniquement si le contrôleur tient un gun
+              const grabberComp = this.el.components.grabber;
+              if (
+                !grabberComp ||
+                !grabberComp.grabbed ||
+                grabberComp.grabbed.id !== "gun"
+              )
+                return;
 
-              const gun = grabber.grabbed;
-
-              // Direction et position
+              const gunEl = grabberComp.grabbed;
               const gunDir = new THREE.Vector3();
-              gun.object3D.getWorldDirection(gunDir);
+              gunEl.object3D.getWorldDirection(gunDir);
               const gunPos = new THREE.Vector3();
-              gun.object3D.getWorldPosition(gunPos);
+              gunEl.object3D.getWorldPosition(gunPos);
 
-              // Créer la balle
+              // Création balle
               const bullet = document.createElement("a-sphere");
               bullet.setAttribute("radius", 0.05);
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
+              bullet.setAttribute("shadow", "cast: true; receive: true");
 
+              // Position de départ légèrement devant le canon
               const launchPos = gunPos
                 .clone()
                 .add(gunDir.clone().multiplyScalar(0.15));
@@ -235,21 +252,16 @@
                 "position",
                 `${launchPos.x} ${launchPos.y} ${launchPos.z}`
               );
-              bullet.setAttribute("shadow", "cast: true; receive: true");
               this.el.sceneEl.appendChild(bullet);
 
-              // Attendre que le body soit prêt
               bullet.addEventListener("body-loaded", () => {
                 const body = bullet.body;
-                if (!body) return;
-                // S'assurer que le vecteur de vitesse est un vecteur cannon
-                if (body.velocity) {
-                  body.velocity.set(
-                    gunDir.x * this.data.speed,
-                    gunDir.y * this.data.speed,
-                    gunDir.z * this.data.speed
-                  );
-                }
+                // Appliquer la vitesse dans la direction du canon
+                body.velocity.set(
+                  gunDir.x * this.data.speed,
+                  gunDir.y * this.data.speed,
+                  gunDir.z * this.data.speed
+                );
               });
             });
           },
