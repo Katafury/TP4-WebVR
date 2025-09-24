@@ -210,7 +210,6 @@
           schema: { speed: { type: "number", default: 20 } },
           init: function () {
             this.el.addEventListener("triggerdown", () => {
-              // Tir uniquement si le contrôleur tient un gun
               const grabberComp = this.el.components.grabber;
               if (
                 !grabberComp ||
@@ -220,35 +219,38 @@
                 return;
 
               const gunEl = grabberComp.grabbed;
-              const gunDir = new THREE.Vector3();
-              gunEl.object3D.getWorldDirection(gunDir);
+
+              // Direction de tir depuis le gun (et non le contrôleur)
+              const dir = new THREE.Vector3();
+              gunEl.object3D.getWorldDirection(dir); // <-- ceci prend en compte la rotation exacte du gun
+              dir.normalize();
+
               const gunPos = new THREE.Vector3();
               gunEl.object3D.getWorldPosition(gunPos);
 
-              // Création balle
+              // Création de la balle
               const bullet = document.createElement("a-sphere");
               bullet.setAttribute("radius", 0.05);
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
               bullet.setAttribute("shadow", "cast: true; receive: true");
 
-              // Position de départ légèrement devant le canon
+              // Position devant le canon
               const launchPos = gunPos
                 .clone()
-                .add(gunDir.clone().multiplyScalar(0.15));
+                .add(dir.clone().multiplyScalar(0.15));
               bullet.setAttribute(
                 "position",
                 `${launchPos.x} ${launchPos.y} ${launchPos.z}`
               );
+
               this.el.sceneEl.appendChild(bullet);
 
               bullet.addEventListener("body-loaded", () => {
-                const body = bullet.body;
-                // Appliquer la vitesse dans la direction du canon
-                body.velocity.set(
-                  gunDir.x * this.data.speed,
-                  gunDir.y * this.data.speed,
-                  gunDir.z * this.data.speed
+                bullet.body.velocity.set(
+                  dir.x * this.data.speed,
+                  dir.y * this.data.speed,
+                  dir.z * this.data.speed
                 );
               });
             });
