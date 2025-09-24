@@ -2,11 +2,10 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>TP4 – VR Rig avec joystick</title>
+    <title>TP4 – VR Rig avec joystick + Arme</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@c-frame/aframe-physics-system@4.2.3/dist/aframe-physics-system.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component@5.0.2/dist/aframe-super-hands.min.js"></script>
   </head>
 
   <body>
@@ -61,6 +60,18 @@
         static-body
       ></a-plane>
 
+      <!-- Pistolet (modèle 3D) -->
+      <a-entity
+        id="gun"
+        class="grabbable"
+        gltf-model="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Box/glTF/Box.gltf"
+        scale="0.5 0.5 0.5"
+        position="0 1 -2"
+        dynamic-body="mass:1"
+        weapon
+      >
+      </a-entity>
+
       <!-- Rig joueur avec joystick -->
       <a-entity id="rig" position="0 1.6 5">
         <a-entity id="playerCam" camera look-controls></a-entity>
@@ -72,7 +83,6 @@
           grabber
           raycaster="objects: .grabbable"
         ></a-entity>
-
         <a-entity
           joystick-turn
           laser-controls="hand: right"
@@ -83,6 +93,7 @@
       </a-entity>
 
       <script>
+        /* Déplacement avec joystick gauche */
         AFRAME.registerComponent("joystick-move", {
           schema: {
             speed: { type: "number", default: 3 },
@@ -91,8 +102,8 @@
           init() {
             this.dir = new THREE.Vector3();
             this.el.addEventListener("thumbstickmoved", (e) => {
-              let x = e.detail.x;
-              let y = e.detail.y;
+              let x = e.detail.x,
+                y = e.detail.y;
               if (Math.abs(x) < 0.05 && Math.abs(y) < 0.05) return;
               if (this.data.invertY) y = -y;
               const rig = document.querySelector("#rig");
@@ -115,6 +126,7 @@
           },
         });
 
+        /* Rotation avec joystick droit */
         AFRAME.registerComponent("joystick-turn", {
           schema: { turnSpeed: { type: "number", default: 80 } },
           init() {
@@ -132,6 +144,7 @@
           },
         });
 
+        /* Grabber personnalisé */
         AFRAME.registerComponent("grabber", {
           init: function () {
             this.grabbed = null;
@@ -141,7 +154,6 @@
               const ray = evt.currentTarget.components["raycaster"];
               if (ray && ray.intersections.length > 0) {
                 this.grabbed = ray.intersections[0].object.el;
-                // Désactiver la physique pendant le grab
                 if (this.grabbed.components["dynamic-body"]) {
                   this.grabbed.removeAttribute("dynamic-body");
                 }
@@ -151,11 +163,56 @@
             gripup: function (evt) {
               if (this.grabbed) {
                 this.el.sceneEl.object3D.attach(this.grabbed.object3D);
-                // Réactiver la physique après le relâchement
                 this.grabbed.setAttribute("dynamic-body", "mass:1");
                 this.grabbed = null;
               }
             },
+          },
+        });
+
+        /* Composant arme */
+        AFRAME.registerComponent("weapon", {
+          init: function () {
+            this.shooting = false;
+            this.el.addEventListener("triggerdown", (evt) => {
+              this.shoot();
+            });
+          },
+          shoot: function () {
+            const bullet = document.createElement("a-sphere");
+            bullet.setAttribute("radius", "0.05");
+            bullet.setAttribute("color", "yellow");
+            bullet.setAttribute("shadow", "cast: true; receive: false");
+            bullet.setAttribute("dynamic-body", "mass:0.1");
+
+            // Positionner la balle au bout du canon du pistolet
+            const gunObj = this.el.object3D;
+            const muzzle = new THREE.Vector3(0, 0, -0.5); // vers l’avant du modèle
+            gunObj.localToWorld(muzzle);
+            bullet.setAttribute(
+              "position",
+              `${muzzle.x} ${muzzle.y} ${muzzle.z}`
+            );
+
+            this.el.sceneEl.appendChild(bullet);
+
+            // Calculer la direction
+            const direction = new THREE.Vector3(0, 0, -1);
+            gunObj.getWorldDirection(direction);
+            direction.normalize();
+
+            const force = direction.multiplyScalar(10); // vitesse du tir
+            bullet.addEventListener("body-loaded", () => {
+              bullet.body.applyImpulse(
+                new CANNON.Vec3(force.x, force.y, force.z),
+                new CANNON.Vec3().copy(bullet.body.position)
+              );
+            });
+
+            // Supprimer la balle après 5s
+            setTimeout(() => {
+              if (bullet.parentNode) bullet.parentNode.removeChild(bullet);
+            }, 5000);
           },
         });
       </script>
