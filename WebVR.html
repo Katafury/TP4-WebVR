@@ -14,6 +14,10 @@
       renderer="antialias: true; colorManagement: true;"
       target-spawner
     >
+      <a-assets>
+        <audio id="hit-sound" src="hit.wav"></audio>
+      </a-assets>
+
       <!-- Lumières -->
       <a-entity
         light="type: directional; intensity: 1; castShadow: true"
@@ -233,6 +237,8 @@
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
               bullet.setAttribute("shadow", "cast: true; receive: true");
+              bullet.setAttribute("class", "bullet");
+              bullet.setAttribute("impact-sound", "");
 
               const launchPos = gunPos
                 .clone()
@@ -338,6 +344,26 @@
           },
           remove: function () {
             clearInterval(this.intervalId);
+          },
+        });
+
+        AFRAME.registerComponent("impact-sound", {
+          init: function () {
+            this.el.addEventListener("collide", (e) => {
+              // Vérifie si c'est une balle qui touche quelque chose
+              const other = e.detail.body.el;
+              if (!other) return;
+
+              // On peut ajouter une condition si on veut limiter à certaines cibles
+              if (this.el.getAttribute("class") === "bullet") {
+                // Jouer le son
+                const sound = document.createElement("a-sound");
+                sound.setAttribute("src", "#hit-sound");
+                sound.setAttribute("autoplay", "true");
+                sound.setAttribute("volume", 1);
+                this.el.appendChild(sound);
+              }
+            });
           },
         });
       </script>
