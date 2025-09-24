@@ -12,6 +12,7 @@
       shadow="type: pcfsoft"
       physics="gravity: -9.8"
       renderer="antialias: true; colorManagement: true;"
+      target-spawner
     >
       <!-- Lumières -->
       <a-entity
@@ -257,6 +258,79 @@
               };
               requestAnimationFrame(applyVelocity);
             });
+          },
+        });
+
+        // Composant cible
+        AFRAME.registerComponent("target", {
+          schema: {
+            color: { type: "color", default: "#FF0000" },
+            shape: { type: "string", default: "box" }, // box, cone, sphere
+          },
+          init: function () {
+            const el = this.el;
+            el.setAttribute("shadow", "cast: true; receive: true");
+
+            // Créer la géométrie selon le type
+            switch (this.data.shape) {
+              case "box":
+                el.setAttribute("geometry", {
+                  primitive: "box",
+                  width: 0.5,
+                  height: 0.5,
+                  depth: 0.5,
+                });
+                break;
+              case "cone":
+                el.setAttribute("geometry", {
+                  primitive: "cone",
+                  radiusBottom: 0.3,
+                  height: 0.6,
+                });
+                break;
+              case "sphere":
+                el.setAttribute("geometry", {
+                  primitive: "sphere",
+                  radius: 0.25,
+                });
+                break;
+            }
+
+            el.setAttribute("material", { color: this.data.color });
+            el.setAttribute("dynamic-body", "mass:1"); // pour détecter collisions
+          },
+        });
+
+        // Composant pour générer des cibles aléatoires
+        AFRAME.registerComponent("target-spawner", {
+          schema: {
+            interval: { type: "number", default: 3000 }, // génération toutes les 3s
+          },
+          init: function () {
+            const spawnTarget = () => {
+              const shapes = ["box", "cone", "sphere"];
+              const colors = ["#FF0000", "#00FF00", "#0000FF", "#FFFF00"];
+
+              const target = document.createElement("a-entity");
+              target.setAttribute("target", {
+                shape: shapes[Math.floor(Math.random() * shapes.length)],
+                color: colors[Math.floor(Math.random() * colors.length)],
+              });
+
+              // Position aléatoire devant le joueur
+              target.setAttribute("position", {
+                x: (Math.random() - 0.5) * 10, // -5 à 5
+                y: 1 + Math.random() * 2, // 1 à 3
+                z: -3 - Math.random() * 5, // -3 à -8
+              });
+
+              document.querySelector("a-scene").appendChild(target);
+            };
+
+            this.intervalId = setInterval(spawnTarget, this.data.interval);
+          },
+          remove: function () {
+            clearInterval(this.intervalId);
           },
         });
       </script>
