@@ -210,16 +210,25 @@
           schema: { speed: { type: "number", default: 20 } },
           init: function () {
             this.el.addEventListener("triggerdown", () => {
-              if (!this.el.isConnected) return; // vérifier que le gun est dans la scène
-              const gunDir = new THREE.Vector3();
-              this.el.object3D.getWorldDirection(gunDir);
-              const gunPos = new THREE.Vector3();
-              this.el.object3D.getWorldPosition(gunPos);
+              // récupérer le composant grabber du contrôleur
+              const grabber = this.el.components.grabber;
+              if (!grabber || !grabber.grabbed) return; // ne rien faire si rien n'est attrapé
+              if (grabber.grabbed.id !== "gun") return; // ne tirer que si c'est le pistolet
 
+              const gun = grabber.grabbed;
+
+              // calculer direction et position du canon
+              const gunDir = new THREE.Vector3();
+              gun.object3D.getWorldDirection(gunDir);
+              const gunPos = new THREE.Vector3();
+              gun.object3D.getWorldPosition(gunPos);
+
+              // créer la balle
               const bullet = document.createElement("a-sphere");
               bullet.setAttribute("radius", 0.05);
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
+
               // placer la balle devant le canon
               const launchPos = gunPos
                 .clone()
@@ -247,4 +256,3 @@
     </a-scene>
   </body>
 </html>
-
