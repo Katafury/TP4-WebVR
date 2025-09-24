@@ -210,26 +210,24 @@
           schema: { speed: { type: "number", default: 20 } },
           init: function () {
             this.el.addEventListener("triggerdown", () => {
-              // récupérer le composant grabber du contrôleur
               const grabber = this.el.components.grabber;
-              if (!grabber || !grabber.grabbed) return; // ne rien faire si rien n'est attrapé
-              if (grabber.grabbed.id !== "gun") return; // ne tirer que si c'est le pistolet
+              if (!grabber || !grabber.grabbed) return;
+              if (grabber.grabbed.id !== "gun") return;
 
               const gun = grabber.grabbed;
 
-              // calculer direction et position du canon
+              // Direction et position
               const gunDir = new THREE.Vector3();
               gun.object3D.getWorldDirection(gunDir);
               const gunPos = new THREE.Vector3();
               gun.object3D.getWorldPosition(gunPos);
 
-              // créer la balle
+              // Créer la balle
               const bullet = document.createElement("a-sphere");
               bullet.setAttribute("radius", 0.05);
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
 
-              // placer la balle devant le canon
               const launchPos = gunPos
                 .clone()
                 .add(gunDir.clone().multiplyScalar(0.15));
@@ -238,16 +236,20 @@
                 `${launchPos.x} ${launchPos.y} ${launchPos.z}`
               );
               bullet.setAttribute("shadow", "cast: true; receive: true");
-
               this.el.sceneEl.appendChild(bullet);
 
+              // Attendre que le body soit prêt
               bullet.addEventListener("body-loaded", () => {
                 const body = bullet.body;
-                body.velocity.set(
-                  gunDir.x * this.data.speed,
-                  gunDir.y * this.data.speed,
-                  gunDir.z * this.data.speed
-                );
+                if (!body) return;
+                // S'assurer que le vecteur de vitesse est un vecteur cannon
+                if (body.velocity) {
+                  body.velocity.set(
+                    gunDir.x * this.data.speed,
+                    gunDir.y * this.data.speed,
+                    gunDir.z * this.data.speed
+                  );
+                }
               });
             });
           },
