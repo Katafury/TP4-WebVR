@@ -208,32 +208,33 @@
         // Shooter
         AFRAME.registerComponent("shooter", {
           schema: { speed: { type: "number", default: 20 } },
-          init: function () {
+          init: function() {
             this.el.addEventListener("triggerdown", () => {
-              if (!this.el.isConnected) return; // vérifier que le gun est dans la scène
-              const gunDir = new THREE.Vector3();
-              this.el.object3D.getWorldDirection(gunDir);
-              const gunPos = new THREE.Vector3();
-              this.el.object3D.getWorldPosition(gunPos);
+              // Tir uniquement si le contrôleur tient un gun
+              const grabberComp = this.el.components.grabber;
+              if (!grabberComp || !grabberComp.grabbed || grabberComp.grabbed.id !== "gun") return;
 
+              const gunEl = grabberComp.grabbed;
+              const gunDir = new THREE.Vector3();
+              gunEl.object3D.getWorldDirection(gunDir);
+              const gunPos = new THREE.Vector3();
+              gunEl.object3D.getWorldPosition(gunPos);
+
+              // Création balle
               const bullet = document.createElement("a-sphere");
               bullet.setAttribute("radius", 0.05);
               bullet.setAttribute("color", "#FFD700");
               bullet.setAttribute("dynamic-body", "mass:0.1");
-              // placer la balle devant le canon
-              const launchPos = gunPos
-                .clone()
-                .add(gunDir.clone().multiplyScalar(0.15));
-              bullet.setAttribute(
-                "position",
-                `${launchPos.x} ${launchPos.y} ${launchPos.z}`
-              );
               bullet.setAttribute("shadow", "cast: true; receive: true");
 
+              // Position de départ légèrement devant le canon
+              const launchPos = gunPos.clone().add(gunDir.clone().multiplyScalar(0.15));
+              bullet.setAttribute("position", `${launchPos.x} ${launchPos.y} ${launchPos.z}`);
               this.el.sceneEl.appendChild(bullet);
 
               bullet.addEventListener("body-loaded", () => {
                 const body = bullet.body;
+                // Appliquer la vitesse dans la direction du canon
                 body.velocity.set(
                   gunDir.x * this.data.speed,
                   gunDir.y * this.data.speed,
@@ -241,7 +242,7 @@
                 );
               });
             });
-          },
+          }
         });
       </script>
     </a-scene>
