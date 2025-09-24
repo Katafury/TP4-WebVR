@@ -6,6 +6,7 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@c-frame/aframe-physics-system@4.2.3/dist/aframe-physics-system.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-super-hands-component@5.0.2/dist/aframe-super-hands.min.js"></script>
   </head>
   <body>
     <a-scene
@@ -59,6 +60,7 @@
         class="grabbable"
         kinematic-body
         gun
+        super-hands
       ></a-entity>
       <!-- Sol -->
       <a-plane
@@ -80,6 +82,7 @@
           oculus-touch-controls="hand: left"
           grabber
           raycaster="objects: .grabbable"
+          super-hands
         ></a-entity>
         <a-entity
           joystick-turn
@@ -87,6 +90,7 @@
           oculus-touch-controls="hand: right"
           grabber
           raycaster="objects: .grabbable"
+          super-hands
         ></a-entity>
       </a-entity>
 
