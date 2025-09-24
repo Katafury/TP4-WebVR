@@ -349,19 +349,17 @@
 
         AFRAME.registerComponent("impact-sound", {
           init: function () {
-            this.el.addEventListener("collide", (e) => {
-              // Vérifie si c'est une balle qui touche quelque chose
-              const other = e.detail.body.el;
-              if (!other) return;
+            // Créer le son une seule fois
+            const sound = document.createElement("a-sound");
+            sound.setAttribute("src", "#hit-sound");
+            sound.setAttribute("volume", 1);
+            this.el.appendChild(sound);
 
-              // On peut ajouter une condition si on veut limiter à certaines cibles
+            this.el.addEventListener("collide", (e) => {
+              // Vérifie que c'est bien une balle
               if (this.el.getAttribute("class") === "bullet") {
-                // Jouer le son
-                const sound = document.createElement("a-sound");
-                sound.setAttribute("src", "#hit-sound");
-                sound.setAttribute("autoplay", "true");
-                sound.setAttribute("volume", 1);
-                this.el.appendChild(sound);
+                // Jouer le son à chaque collision
+                sound.components.sound.playSound();
               }
             });
           },
