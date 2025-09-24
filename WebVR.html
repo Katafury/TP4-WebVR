@@ -166,7 +166,11 @@
               if (ray && ray.intersections.length > 0) {
                 this.grabbed = ray.intersections[0].object.el;
                 if (this.grabbed.components["dynamic-body"]) {
+                  // Remplacer dynamic-body par kinematic-body
+                  const mass =
+                    this.grabbed.getAttribute("dynamic-body").mass || 1;
                   this.grabbed.removeAttribute("dynamic-body");
+                  this.grabbed.setAttribute("kinematic-body", `mass: ${mass}`);
                 }
                 evt.currentTarget.object3D.attach(this.grabbed.object3D);
               }
@@ -174,7 +178,13 @@
             gripup: function (evt) {
               if (this.grabbed) {
                 this.el.sceneEl.object3D.attach(this.grabbed.object3D);
-                this.grabbed.setAttribute("dynamic-body", "mass:1");
+                // Remettre dynamic-body pour retomber normalement
+                let mass = 1;
+                if (this.grabbed.components["kinematic-body"]) {
+                  mass = this.grabbed.getAttribute("kinematic-body").mass || 1;
+                  this.grabbed.removeAttribute("kinematic-body");
+                }
+                this.grabbed.setAttribute("dynamic-body", `mass: ${mass}`);
                 this.grabbed = null;
               }
             },
@@ -228,5 +238,6 @@
     </a-scene>
   </body>
 </html>
+
 
 
